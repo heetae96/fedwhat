@@ -156,7 +156,7 @@ class P2PNode:
             #self.print_finger_table("debug")
             start=time.time()
             self._update_finger_table()
-            #self.print_finger_table()
+            self.print_finger_table()
             #time.sleep(5)
             end=time.time()
             message = "=> ended fixing fingers in {} seconds\n".format(end-start)
@@ -196,7 +196,7 @@ class P2PNode:
         #self._handle(data, conn)
         data = pickle.loads(data)
         self.logger.debug("[recv data : {}]".format(data))
-        print(data)
+        #print(data)
         threading.Thread(target=self._handle, args=((data,conn)), daemon=True).start()
         sel.unregister(conn)
 
@@ -449,20 +449,26 @@ class P2PNode:
     #             self.logger.warning(message)
     #             print(message)
     # ############################# for logging ############################
-    # def print_finger_table(self, level="info"):
-    #     """
-    #     print finger table with ideal id
-    #     """
-    #     message="\n<finger table>"
+    def print_finger_table(self, level="info"):
+        """
+        print finger table with ideal id
+        """
+        message="\n<finger table>"
         
-    #     for i,elem in enumerate(self.finger_table):
-    #         id = (self.id + 2 ** i) % 2 ** NUM_OF_BITS
-    #         message+="\n%2d | %s:%d (%2d)" % (id, elem[0][0], elem[0][1], elem[1])
-    #     message+="\n"
-    #     if level == "info":
-    #         self.logger.info(message)
-    #     elif level == "debug":
-    #         self.logger.debug(message)
+        for i,elem in enumerate(self.finger_table):
+            id = (self.id + 2 ** i) % 2 ** NUM_OF_BITS
+            message+="\n%2d | %s:%d (%2d)" % (id, elem[0][0], elem[0][1], elem[1])
+        message+="\n"
+        if level == "info":
+            self.logger.info(message)
+        elif level == "debug":
+            self.logger.debug(message)
 
 class MyError(Exception):
     pass
+
+if __name__ == '__main__':
+    this_addr, help_addr, logger, container= utils.handle_args()
+
+        
+    node = P2PNode(logger, (this_addr), (help_addr))
