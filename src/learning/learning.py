@@ -70,7 +70,8 @@ class learning:
         self.criterion = nn.CrossEntropyLoss()
         
         self.optimizer = optim.Adam(self.net.parameters())
-
+        #self.optimizer = optim.SGD(self.net.parameters())
+        
     # Training
     def train(self, epoch):
         net, trainloader, device, optimizer, criterion = self.net, self.trainloader, self.device, self.optimizer, self.criterion

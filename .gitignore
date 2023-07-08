@@ -43,3 +43,5 @@ __pycache__
 nmon
 record
 fedbuff
+test
+*test.py

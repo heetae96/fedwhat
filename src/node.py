@@ -195,7 +195,7 @@ class P2PNode:
         time.sleep(0.5)
         #self._handle(data, conn)
         data = pickle.loads(data)
-        self.logger.debug("[recv data : {}]".format(data))
+        #self.logger.debug("[recv data : {}]".format(data))
         #print(data)
         threading.Thread(target=self._handle, args=((data,conn)), daemon=True).start()
         sel.unregister(conn)
@@ -229,7 +229,7 @@ class P2PNode:
             if data==None:
                 raise MyError
         except MyError:
-            #self.logger.warning("error to find_successor(maybe deadlock)")
+            self.logger.warning("error to find_successor(maybe deadlock)")
             pass
         """
         get successor address and id with mutex
@@ -287,10 +287,12 @@ class P2PNode:
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.connect(self.finger_table[i][0])
-                    self.logger.debug("--> sent find_successor_by_id({}) to {}".format(id,self.finger_table[i][0]))
+                    if threading.current_thread().getName() == self.daemon_t.getName():
+                        self.logger.debug("--> sent find_successor_by_id({}) to {}".format(id,self.finger_table[i][0]))
                     sock.send(pickle.dumps(('find_successor_by_id', self.addr, self.id, id)))
                     message = "-|- wait for recv[find_successor_by_id({})] from {}".format(id,self.finger_table[i][0])
-                    self.logger.debug(message)
+                    if threading.current_thread().getName() == self.daemon_t.getName():
+                        self.logger.debug(message)
                     data=self.recv_data(sock)
                     message = "<-- recv data [{}] {}".format(data, threading.current_thread().getName())
                     if threading.current_thread().getName() == self.daemon_t.getName():
@@ -393,6 +395,8 @@ class P2PNode:
             self.successor_addr = data[1]
             self.successor_id = data[2]
             self.finger_table[0] = (self.successor_addr, self.successor_id)
+        elif(self.id == data[2]):
+            self.logger.warning("hash overwrapped!!! %d, %d, %s" %(self.id, data[2], data[1]))
         elif contain(data[2], self.id, self.successor_id):
             conn.send(pickle.dumps((self.successor_addr, self.successor_id)))
             self.successor_addr = data[1]
@@ -463,6 +467,7 @@ class P2PNode:
             self.logger.info(message)
         elif level == "debug":
             self.logger.debug(message)
+        self.logger.info("FINGER_TABLE_ENTRY %d " %(len(set(self.finger_table))))
 
 class MyError(Exception):
     pass

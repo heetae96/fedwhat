@@ -57,8 +57,8 @@ def handle_args():
 
     if args.log == True:
         logger = logging.getLogger()
-        #log_handler= logging.FileHandler("logs/%s.log" %(str(this_addr[1])), mode='w', encoding=None, delay=False)
-        log_handler= logging.StreamHandler()
+        log_handler= logging.FileHandler("logs/%s.log" %(str(this_addr[1])), mode='w', encoding=None, delay=False)
+        #log_handler= logging.StreamHandler()
         log_handler.setFormatter(formatter)
         if args.debug==True:
             log_handler.setLevel(logging.DEBUG)
