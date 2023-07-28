@@ -8,7 +8,7 @@ try:
     from . import utils
 except:
     import utils
-NUM_OF_BITS = 16
+NUM_OF_BITS = 32
 
 __all__ = ['P2PNode']
 
@@ -58,7 +58,15 @@ class P2PNode:
         self.daemon_t = threading.Thread(target=self.daemon, daemon=True, name="daemon")
         
         self.listen_t.start()
-        self.join()
+        while 1:
+            try:
+                self.join()
+                break
+            except(ConnectionError):
+                print("Connection Error start again..")
+                self.logger.warning("Connection Error start again..")
+                time.sleep(1)
+                pass
         self.daemon_t.start()
         
         #while self.alive:
@@ -90,7 +98,7 @@ class P2PNode:
         while self.alive:
             self.__stabilize()
             self.__fix_fingers()
-            time.sleep(3)
+            time.sleep(0.5)
 
     def __stabilize(self):
         """
@@ -184,21 +192,20 @@ class P2PNode:
         conn: socket.socket
         conn, addr = sock.accept()
         sel.register(conn, selectors.EVENT_READ, self.__read_handler)
+        
 
     def __read_handler(self, conn: socket.socket, sel: selectors.BaseSelector):
         """
         read data from other nodes
         """
-        message = "---- wait for recv[any other] from {}".format(conn.getpeername())
-        #self.logger.debug(message)  
-        data = conn.recv(1024)
-        time.sleep(0.5)
-        #self._handle(data, conn)
-        data = pickle.loads(data)
-        #self.logger.debug("[recv data : {}]".format(data))
-        #print(data)
-        threading.Thread(target=self._handle, args=((data,conn)), daemon=True).start()
-        sel.unregister(conn)
+        #message = "---- wait for recv[any other] from {}".format(conn.getpeername()) 
+        try:
+            data = conn.recv(1024)
+            data = pickle.loads(data)
+            threading.Thread(target=self._handle, args=((data,conn)), daemon=True).start()
+            sel.unregister(conn)
+        except Exception as e:
+            self.logger.critical("ERROR in read handler")
 
     ################## core method thread called by init ##################
 
@@ -219,24 +226,41 @@ class P2PNode:
         """
         find successor of id, data sent by pickle
         """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(addr)
+        # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # sock.settimeout(30)
+        T=0
+        while True:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                sock.settimeout(30)
+                sock.connect(addr)
+                break
+            except socket.timeout:
+                self.logger.warning("Can't connected in 5 sec. Try again(%d)" %(T))
+                print("Can't connected in 5 sec. Try again(%d)" %(T))
+                T+=1
+                pass
         sock.send(pickle.dumps(('find_successor', self.addr, self.id)))
-        message = "---- wait for recv[find_successor] from {}".format(addr)
-        #self.logger.debug(message)
+        self.logger.debug("send join req to (%s))" %(str(addr)))
         try:
             data=self.recv_data(sock)
-            if data==None:
+            if data==None or data[0]==self.addr:
                 raise MyError
         except MyError:
-            self.logger.warning("error to find_successor(maybe deadlock)")
+            self.logger.critical("error to find_successor(maybe deadlock)")
             pass
+        except TimeoutError:
+                self.logger.critical("Can't recv in 30 sec. It may dead me:(%s) to:(%s)", str(self.addr), str(addr))
+                print("Can't recv in 30 sec. It may dead me:(%s) to:(%s)", str(self.addr), str(addr))
         """
         get successor address and id with mutex
         """
         self.successor_addr = data[0]
         self.successor_id = data[1]
         sock.close()
+        self.logger.info("join succ")
   
     def _notify(self):
         """
@@ -287,16 +311,16 @@ class P2PNode:
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.connect(self.finger_table[i][0])
-                    if threading.current_thread().getName() == self.daemon_t.getName():
+                    if threading.current_thread().name == self.daemon_t.name:
                         self.logger.debug("--> sent find_successor_by_id({}) to {}".format(id,self.finger_table[i][0]))
                     sock.send(pickle.dumps(('find_successor_by_id', self.addr, self.id, id)))
                     message = "-|- wait for recv[find_successor_by_id({})] from {}".format(id,self.finger_table[i][0])
-                    if threading.current_thread().getName() == self.daemon_t.getName():
+                    if threading.current_thread().name == self.daemon_t.name:
                         self.logger.debug(message)
                     data=self.recv_data(sock)
-                    message = "<-- recv data [{}] {}".format(data, threading.current_thread().getName())
-                    if threading.current_thread().getName() == self.daemon_t.getName():
-                        self.logger.debug(message, extra={'color': 'red'})
+                    message = "<-- recv data [{}] {}".format(data, threading.current_thread().name)
+                    if threading.current_thread().name == self.daemon_t.name:
+                        self.logger.debug(message)
                     if data==None:
                         raise MyError
                 except MyError:
@@ -434,6 +458,7 @@ class P2PNode:
             conn.send(pickle.dumps((self.addr, self.id)))
         else:
             self._find_successor_by_id(data[3], conn)
+
 
 
     # def _handle_hop_count(self, data, conn):

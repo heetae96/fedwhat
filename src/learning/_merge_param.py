@@ -67,11 +67,12 @@ class FedAvg_modif:
         """
         rate계산위치가 에매해짐
         """
+        self.par = par
         rate = 1/len(P)
         # reset global weights before aggregation
         self.agg_weights = copy.deepcopy(par)
         for key in par.keys():
-            self.agg_weights[key] = par[key]/len(P)
+            self.agg_weights[key] = par[key] /len(P)
         
         for k in range(1,len(P)):
             # after popping, the item is removed from the cache
@@ -85,6 +86,7 @@ class FedAvg_modif:
     def _aggregate_pytorch(self, par, rate, dev):
         
         for k in par.keys():
+            
             tmp= par[k] *rate
             tmp = tmp.to(torch.device(dev))
             self.agg_weights[k] += tmp
@@ -165,17 +167,21 @@ class FedOPT(FedAvg_modif):
                 for k in self.d_t.keys()
             }
         self._delta_v_pytorch()
+        parkey = list(self.current_weights.keys())
+        bat = 'batch'
+        mean= 'mean'
+        var = 'var'
+        bp= [parkey[i] for i in range(len(parkey)) if (mean in parkey[i]) or (var in parkey[i]) or (bat in parkey[i])]
 
         self.current_weights = OrderedDict({
             k: self.current_weights[k] + self.eta * self.m_t[k] /
             (torch.sqrt(self.v_t[k]) + self.tau)
-            for k in self.current_weights.keys()
+            if k not in bp else average[k] for k in self.current_weights.keys()
         })
 
 class FedAdaGrad(FedOPT):
     """FedAdaGrad class."""
-
-    def __init__(self, beta_1=0.9, beta_2=0.99, eta=1e-2, tau=1e-3):
+    def __init__(self, beta_1=0, beta_2=0.99, eta=1e-2, tau=1e-3):
         """Initialize Fedadagrad instance."""
         super().__init__(beta_1, beta_2, eta, tau)
 

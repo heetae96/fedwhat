@@ -29,7 +29,7 @@ class custom_dataset(VisionDataset):
         split_number=10,
         split_id=0,
         iid=True,   ##이걸 false로 바꾸면 non-iid
-        dataset_name="cifar100",
+        dataset_name="emnist",
     ):
         super(custom_dataset, self).__init__(root=root, transform=transform, target_transform=target_transform)
         self.dataset_name = dataset_name
@@ -46,11 +46,18 @@ class custom_dataset(VisionDataset):
         self.data, self.targets = self.get_data()
 
     def __getitem__(self, index):
-        img, target = self.data[index], self.targets[index]
+        
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
-        img = Image.fromarray(img)
+        
+        if self.dataset_name=='emnist':
+            img, target = self.data[index], int(self.targets[index])
+            img = Image.fromarray(img.numpy(), mode="L")
+        
+        else:
+            img, target = self.data[index], self.targets[index]
+            img = Image.fromarray(img)
 
         if self.transform is not None:
             img = self.transform(img)
@@ -70,6 +77,8 @@ class custom_dataset(VisionDataset):
             dataset = torchvision.datasets.CIFAR100(root=self.root, train=self.train, download=self.download)
         elif self.dataset_name == "svhn":
             dataset = torchvision.datasets.svhn(root=self.root, train=self.train, download=self.download)
+        elif self.dataset_name == "emnist":
+            dataset = torchvision.datasets.EMNIST(root=self.root, split='balanced', train=self.train, download=self.download)
         else:
             raise ValueError("Dataset not found")
 
