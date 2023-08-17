@@ -45,3 +45,5 @@ record
 fedbuff
 test
 *test.py
+*.out
+tmp*

@@ -134,19 +134,22 @@ class P2PNode:
                 connect to next address in finger table
                 """
                 message = "Node {} left".format(self.successor_addr)
-                #self.logger.debug(message)
+                self.logger.warning(message)
                 for i,addr in enumerate(self.finger_table):
                     if (addr[0] != self.successor_addr):
                         self.successor_addr = addr[0]
                         self.successor_id = addr[1]
                         for j in range(i):
                             self.finger_table[j] = self.finger_table[i]
+                        #self.print_finger_table()
                         break
                     else:
                         self.finger_table[i]= (self.predecessor_addr,self.predecessor_id)
-                #if(self._notify_leave()==False):
-                    #message = "error to notifying leave"
-                    #self.logger.warning(message) 
+                if(self._notify_leave()==False):
+                    message = "error to notifying leave"
+                    self.logger.warning(message) 
+                    self.successor_addr = self.predecessor_addr
+                    self.successor_id = self.predecessor_id
                     #self.print_finger_table()   
                 # message = "ended stabilizing"
                 # self.logger.debug(message) 
@@ -234,7 +237,7 @@ class P2PNode:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                sock.settimeout(30)
+                #sock.settimeout(30)
                 sock.connect(addr)
                 break
             except socket.timeout:
@@ -251,7 +254,7 @@ class P2PNode:
         except MyError:
             self.logger.critical("error to find_successor(maybe deadlock)")
             pass
-        except TimeoutError:
+        except socket.timeout:
                 self.logger.critical("Can't recv in 30 sec. It may dead me:(%s) to:(%s)", str(self.addr), str(addr))
                 print("Can't recv in 30 sec. It may dead me:(%s) to:(%s)", str(self.addr), str(addr))
         """
@@ -288,14 +291,20 @@ class P2PNode:
         """
         find successor of id
         """
-        if contain(id, self.id, self.successor_id):
+        message= "find_successor_by_id {}, {}".format(id, threading.current_thread().name)
+        if(id==self.id):
+            return((self.addr, self.id))
+        
+        elif contain(id, self.id, self.successor_id):
             if conn:
                 conn.send(pickle.dumps((self.successor_addr, self.successor_id)))
+                self.logger.debug(message)
             else:
                 return (self.successor_addr, self.successor_id)
         else: 
             if conn:
                 self._find_closest_preceding_finger(id, conn)
+                self.logger.debug(message)
             else:
                 return self._find_closest_preceding_finger(id, None)
     
@@ -334,8 +343,6 @@ class P2PNode:
                     return data
                 break
         if check==False:
-            if (self.id==id):
-                return((self.addr, self.id))
             return ((self.successor_addr, self.successor_id))
             #self.logger.warning("this is terrible situation")
 
@@ -416,18 +423,17 @@ class P2PNode:
         """
         if self.id == self.successor_id:
             conn.send(pickle.dumps((self.addr, self.id)))
-            self.successor_addr = data[1]
-            self.successor_id = data[2]
-            self.finger_table[0] = (self.successor_addr, self.successor_id)
-        elif(self.id == data[2]):
-            self.logger.warning("hash overwrapped!!! %d, %d, %s" %(self.id, data[2], data[1]))
+
         elif contain(data[2], self.id, self.successor_id):
             conn.send(pickle.dumps((self.successor_addr, self.successor_id)))
-            self.successor_addr = data[1]
-            self.successor_id = data[2]
-            self.finger_table[0] = (self.successor_addr, self.successor_id)
+        
         else:
-            self._find_successor_by_id(data[2], conn)
+            self._find_closest_preceding_finger(data[2], conn)
+            return
+        
+        self.successor_addr = data[1]
+        self.successor_id = data[2]
+        self.finger_table[0] = (self.successor_addr, self.successor_id)
      
     def _handle_notify(self, data):
         """
@@ -454,10 +460,7 @@ class P2PNode:
         """
         handle find_successor_by_id request
         """
-        if(data[3]==self.id):
-            conn.send(pickle.dumps((self.addr, self.id)))
-        else:
-            self._find_successor_by_id(data[3], conn)
+        self._find_successor_by_id(data[3], conn)
 
 
 
@@ -486,7 +489,7 @@ class P2PNode:
         
         for i,elem in enumerate(self.finger_table):
             id = (self.id + 2 ** i) % 2 ** NUM_OF_BITS
-            message+="\n%2d | %s:%d (%2d)" % (id, elem[0][0], elem[0][1], elem[1])
+            message+="\n%d | %s:%d (%d)" % (id, elem[0][0], elem[0][1], elem[1])
         message+="\n"
         if level == "info":
             self.logger.info(message)
