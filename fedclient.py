@@ -18,7 +18,7 @@ from src.models import *
 
     
 from src.learning._custom_dataloader import *
-
+T=9
 E = 5
 
 import os
@@ -231,7 +231,9 @@ class fedclient:
                 cudnn.benchmark = True
             self.criterion = nn.CrossEntropyLoss()
             
-            self.optimizer = optim.Adam(self.net.parameters())
+
+            self.optimizer = optim.SGD(self.net.parameters(),lr=0.01,momentum=0.9, weight_decay=5e-4)
+            self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=400)
 
         # Training
         def train(self, epoch):
@@ -301,6 +303,7 @@ class fedclient:
                 #test(epoch)
                 #scheduler.step()
                 print("epoch time : {:.4f} ({:.4f})".format(time.time()-self.st, time.time()-self.prev_t))
+                self.scheduler.step()
                 
             self.rounds = self.rounds + 1
             self.par = self.net.state_dict()
@@ -337,9 +340,9 @@ if __name__ == '__main__':
     this_ip = get_self_ip()
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port","-p", help="this peer's port number", type=int, default=random.randint(12001, 40000))
+    parser.add_argument("--port","-p", help="this peer's port number", type=int, default=random.randint(16001, 40000))
     parser.add_argument("--addr","-a", help="this peer's ip address", type=str, default=this_ip)
-    parser.add_argument("--host_port","-P", help="help peer's port number", type=int, default=12000)
+    parser.add_argument("--host_port","-P", help="help peer's port number", type=int, default=16000)
     parser.add_argument("--host_addr","-A", help="help peer's ip address", type=str, default='220.67.133.165')
     parser.add_argument('--test', '-t', help="option to test", action="store_true", default=False)
     
@@ -356,8 +359,9 @@ if __name__ == '__main__':
     else:
         device = 'cuda:' + str(args.gpu)
     
-    if args.data in [0,1,2,3,4,5]:
-        case = [6,args.data]
+
+    if args.data in range(T):
+        case = [T,args.data]
     else:
         raise ValueError("case_n must be less than 6")
     
