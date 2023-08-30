@@ -105,7 +105,7 @@ class learning:
         print("train loss : %0.4f  train acc : %0.2f" %(train_loss/(batch_idx+1),100.*correct/total))
 
 
-    def test(self, epoch):
+    def test(self, epoch=0):
         net, testloader, device, criterion = self.net, self.testloader, self.device, self.criterion
         global best_acc
         net.eval()
