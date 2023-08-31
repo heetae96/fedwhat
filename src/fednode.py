@@ -53,7 +53,7 @@ class fednode(node.P2PNode):
         #print("----- recv push_req")
         size = para[1]
         rounds = para[2]
-        id = para[3]
+        _id = para[3]
         #print("----- send ok")
         conn.send(b'ok')
         #print(size, rounds, id)
@@ -79,11 +79,11 @@ class fednode(node.P2PNode):
         print('deserialize time:{:.4f}'.format(time.time()-unzip_t))
         check=False
         for i,par in enumerate(self.learning.parQueue):
-            if(par[0]==id):
-                self.learning.parQueue[i] = (id, rounds, data)
+            if(par[0]==_id):
+                self.learning.parQueue[i] = (_id, rounds, data)
                 check=True
         if check!=True:
-            self.learning.parQueue.append((id, rounds, data))
+            self.learning.parQueue.append((_id, rounds, data))
 
     def _handle_pull_param(self ,conn: socket.socket):
         """

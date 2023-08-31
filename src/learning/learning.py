@@ -19,12 +19,10 @@ from ._merge_param import *
 class learning:
     
     def __init__(self, fednode):
-        self.st = time.time()
+        self.st = fednode.st
         self.prev_t=time.time()
         self.alive = True
         self.rounds =0
-        self.parQueue = [(id, 0,None),] #will be size same as number of workers
-        
         
         self.dataconfig = fednode.data_config
         self.device = fednode.device if torch.cuda.is_available() else 'cpu'
@@ -39,21 +37,25 @@ class learning:
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            # transforms.Normalize((0.5,), (0.5,)),
         ])
 
         transform_test = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            # transforms.Normalize((0.5,), (0.5,)),
         ])
 
         trainset = custom_dataset(
             root='./data', train=True, download=True, transform=transform_train, 
-            split_number=self.dataconfig[0], split_id=self.dataconfig[1], iid=self.iid)
+            split_number=self.dataconfig[0], split_id=self.dataconfig[1], iid=self.iid, dataset_name="cifar10" )
         self.trainloader = torch.utils.data.DataLoader(
             trainset, batch_size=128, shuffle=True, num_workers=2)
 
-        testset = torchvision.datasets.CIFAR100(
-            root='./data', train=False, download=True, transform=transform_test)
+        # testset = torchvision.datasets.EMNIST(
+        #     root='./data', split='balanced', train=False, download=False, transform=transform_test)
+        testset = torchvision.datasets.CIFAR10(
+            root='./data', train=False, download=False, transform=transform_test)
         self.testloader = data.DataLoader(
             testset, batch_size=100, shuffle=False, num_workers=2)
 
@@ -69,8 +71,11 @@ class learning:
             cudnn.benchmark = True
         self.criterion = nn.CrossEntropyLoss()
         
-        self.optimizer = optim.Adam(self.net.parameters())
+        #self.optimizer = optim.Adam(self.net.parameters())
         #self.optimizer = optim.SGD(self.net.parameters())
+        self.optimizer = optim.SGD(self.net.parameters(),lr=0.01,momentum=0.9, weight_decay=5e-4)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=400)
+        self.fedopt = FedAvg_modif()
         
     # Training
     def train(self, epoch):
@@ -100,7 +105,7 @@ class learning:
         print("train loss : %0.4f  train acc : %0.2f" %(train_loss/(batch_idx+1),100.*correct/total))
 
 
-    def test(self, epoch):
+    def test(self, epoch=0):
         net, testloader, device, criterion = self.net, self.testloader, self.device, self.criterion
         global best_acc
         net.eval()
@@ -146,8 +151,9 @@ class learning:
                 up_t = time.time()
                 
                 # self.net.load_state_dict(merge_param(self.parQueue, self.device))
-                
-                new_param = merge_param(self.parQueue, self.device)
+                with torch.no_grad():
+                    #new_param = merge_param(self.parQueue, self.device)
+                    new_param = self.fedopt.do(par=self.parQueue[0][2], P=self.parQueue,dev=self.device)
                 
                 # for param, _new in zip(net.parameters(), new_param):
                 #     param.data = _new
@@ -155,9 +161,11 @@ class learning:
                 
                 self.net = self.net.to(torch.device(self.device))
                 #print("parameters loaded time:{:.4f}".format(time.time()-up_t))
-                self.parQueue = [(id, 0,None),]
+                self.parQueue = [(self.id, 0,None),]
                 
                 test(epoch)
+            else:
+                self.parQueue = [(self.id, 0,None),]
             
             for epoch in range(start_epoch, start_epoch+5):
                 train(epoch)
@@ -165,7 +173,7 @@ class learning:
                 #scheduler.step()
                 print("epoch time : {:.4f} ({:.4f})".format(time.time()-self.st, time.time()-self.prev_t))
                 self.prev_t = time.time()
-            
+                self.scheduler.step()
 
             start_epoch+=5
             par = self.net.state_dict()

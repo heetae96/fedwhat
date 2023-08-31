@@ -11,7 +11,7 @@ import sys
 import time
 import os
 
-__all__ = ['contain', 'MultiLineFormatter', 'hash', 'progress_bar','get_global_ip', 'get_self_ip', 'handle_args', 'handle_args_f']
+__all__ = ['contain', 'MultiLineFormatter', 'hash', 'get_global_ip', 'get_self_ip', 'handle_args', 'handle_args_f']
 
 def contain(id, begin, end):
     """

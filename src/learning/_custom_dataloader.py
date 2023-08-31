@@ -135,108 +135,122 @@ class custom_dataset(VisionDataset):
                        
         #non-iid    
         else:
-            dataset = torchvision.datasets.CIFAR10(root=self.root, train=self.train, download=self.download, transform=self.transform)
-            
-            #trn_load = torch.utils.data.DataLoader(dataset, batch_size=50000, shuffle=True, num_workers=2)
-            self.channels = 3; self.width = 32; self.height = 32; self.n_cls = 10;
-
-            # trn_itr = trn_load.__iter__(); 
-            # trn_x, trn_y = trn_itr.__next__()
-            # trn_x = trn_x.numpy(); trn_y = trn_y.numpy().reshape(-1,1)
-            
-            
-            trn_x =dataset.data; trn_y =dataset.targets
-            
-            # rand_perm = np.random.permutation(len(trn_y))
-            # trn_x = trn_x[rand_perm]
-            # trn_y = trn_y[rand_perm]
-            
-            self.trn_x = trn_x
-            self.trn_y = trn_y
-            
-            #unbalaced mount    
-            n_data_per_clnt = int((len(trn_y)) / split_number)
-
-            # if self.unbalanced_sgm != 0:
-            #     # Draw from lognormal distribution
-            #     clnt_data_list = (np.random.lognormal(mean=np.log(n_data_per_clnt), sigma=self.unbalanced_sgm, size=self.n_client))
-            #     clnt_data_list = (clnt_data_list/np.sum(clnt_data_list)*len(trn_y)).astype(int)
-            #     diff = np.sum(clnt_data_list) - len(trn_y)
-
-            #     # Add/Subtract the excess number starting from first client
-            #     if diff!= 0:
-            #         for clnt_i in range(split_number):
-            #             if clnt_data_list[clnt_i] > diff:
-            #                 clnt_data_list[clnt_i] -= diff
-            #                 break
-                        
-            # else:
-            #print(trn_y)
-            clnt_data_list = (np.ones(split_number) * n_data_per_clnt).astype(int)
-            cls_priors   = np.random.dirichlet(alpha=[self.rule_arg]*self.n_cls,size=split_number)    
-            
-            prior_cumsum = np.cumsum(cls_priors, axis=1)
-            
-            idx_list = [np.array([], dtype=int) for _ in range(self.n_cls)]
-
-            for i, dat in enumerate(trn_y):
-                idx_list[dat] = np.append(idx_list[dat], i)
+            if os.path.isfile('%s/dat/diri%d_%d/%d' %(self.root,self.rule_arg,self.split_number,self.split_id)):
+                fp=open('%s/dat/diri%d_%d/%d' %(self.root,self.rule_arg,self.split_number,self.split_id), 'rb')
+                dat=pickle.load(fp)
+                clnt_xi, clnt_yi=dat
+                self.data = list(clnt_xi); self.targets = clnt_yi.T.tolist()[0]
                 
+            else:
+                dataset = torchvision.datasets.CIFAR10(root=self.root, train=self.train, download=self.download, transform=self.transform)
+                
+                #trn_load = torch.utils.data.DataLoader(dataset, batch_size=50000, shuffle=True, num_workers=2)
+                self.channels = 3; self.width = 32; self.height = 32; self.n_cls = 10;
+
+                # trn_itr = trn_load.__iter__(); 
+                # trn_x, trn_y = trn_itr.__next__()
+                # trn_x = trn_x.numpy(); trn_y = trn_y.numpy().reshape(-1,1)
+                
+                
+                trn_x =dataset.data; trn_y =dataset.targets
+                
+                # rand_perm = np.random.permutation(len(trn_y))
+                # trn_x = trn_x[rand_perm]
+                # trn_y = trn_y[rand_perm]
+                
+                self.trn_x = trn_x
+                self.trn_y = trn_y
+                
+                #unbalaced mount    
+                n_data_per_clnt = int((len(trn_y)) / split_number)
+
+                # if self.unbalanced_sgm != 0:
+                #     # Draw from lognormal distribution
+                #     clnt_data_list = (np.random.lognormal(mean=np.log(n_data_per_clnt), sigma=self.unbalanced_sgm, size=self.n_client))
+                #     clnt_data_list = (clnt_data_list/np.sum(clnt_data_list)*len(trn_y)).astype(int)
+                #     diff = np.sum(clnt_data_list) - len(trn_y)
+
+                #     # Add/Subtract the excess number starting from first client
+                #     if diff!= 0:
+                #         for clnt_i in range(split_number):
+                #             if clnt_data_list[clnt_i] > diff:
+                #                 clnt_data_list[clnt_i] -= diff
+                #                 break
+                            
+                # else:
+                #print(trn_y)
+                clnt_data_list = (np.ones(split_number) * n_data_per_clnt).astype(int)
+                cls_priors   = np.random.dirichlet(alpha=[self.rule_arg]*self.n_cls,size=split_number)    
+                
+                prior_cumsum = np.cumsum(cls_priors, axis=1)
+                
+                idx_list = [np.array([], dtype=int) for _ in range(self.n_cls)]
+
+                for i, dat in enumerate(trn_y):
+                    idx_list[dat] = np.append(idx_list[dat], i)
+                    
+                
+                #idx_list = [trn_y[k]==i for k in range(len(trn_y)) for i in range(self.n_cls)]
+                #print(idx_list)
+                # exit()
+                cls_amount = [len(idx_list[i]) for i in range(self.n_cls)]
             
-            #idx_list = [trn_y[k]==i for k in range(len(trn_y)) for i in range(self.n_cls)]
-            #print(idx_list)
-            # exit()
-            cls_amount = [len(idx_list[i]) for i in range(self.n_cls)]
-        
-            clnt_x = [ np.zeros((clnt_data_list[clnt__], self.height, self.width, self.channels)).astype(np.uint8) for clnt__ in range(split_number) ]
-            clnt_y = [ np.zeros((clnt_data_list[clnt__], 1)).astype(np.int64) for clnt__ in range(split_number) ]
-            #print(cls_amount)
-            while(np.sum(clnt_data_list)!=0):
-                curr_clnt = np.random.randint(split_number)
-                # If current node is full resample a client
-                #print('Remaining Data: %d' %np.sum(clnt_data_list))
-                if clnt_data_list[curr_clnt] <= 0:
-                    continue
-                clnt_data_list[curr_clnt] -= 1
-                curr_prior = prior_cumsum[curr_clnt]
-                while True:
-                    cls_label = np.argmax(np.random.uniform() <= curr_prior)
-                    # Redraw class label if trn_y is out of that class
-                    if cls_amount[cls_label] <= 0:
+                clnt_x = [ np.zeros((clnt_data_list[clnt__], self.height, self.width, self.channels)).astype(np.uint8) for clnt__ in range(split_number) ]
+                clnt_y = [ np.zeros((clnt_data_list[clnt__], 1)).astype(np.int64) for clnt__ in range(split_number) ]
+                #print(cls_amount)
+                while(np.sum(clnt_data_list)!=0):
+                    curr_clnt = np.random.randint(split_number)
+                    # If current node is full resample a client
+                    #print('Remaining Data: %d' %np.sum(clnt_data_list))
+                    if clnt_data_list[curr_clnt] <= 0:
                         continue
-                    cls_amount[cls_label] -= 1
-                    clnt_x[curr_clnt][clnt_data_list[curr_clnt]] = trn_x[idx_list[cls_label][cls_amount[cls_label]]]
-                    clnt_y[curr_clnt][clnt_data_list[curr_clnt]] = trn_y[idx_list[cls_label][cls_amount[cls_label]]]
+                    clnt_data_list[curr_clnt] -= 1
+                    curr_prior = prior_cumsum[curr_clnt]
+                    while True:
+                        cls_label = np.argmax(np.random.uniform() <= curr_prior)
+                        # Redraw class label if trn_y is out of that class
+                        if cls_amount[cls_label] <= 0:
+                            continue
+                        cls_amount[cls_label] -= 1
+                        clnt_x[curr_clnt][clnt_data_list[curr_clnt]] = trn_x[idx_list[cls_label][cls_amount[cls_label]]]
+                        clnt_y[curr_clnt][clnt_data_list[curr_clnt]] = trn_y[idx_list[cls_label][cls_amount[cls_label]]]
 
-                    break
+                        break
 
-            clnt_x = np.asarray(clnt_x)
-            clnt_y = np.asarray(clnt_y)
+                clnt_x = np.asarray(clnt_x)
+                clnt_y = np.asarray(clnt_y)
 
-            cls_means = np.zeros((split_number, self.n_cls))
-            for clnt in range(split_number):
-                for cls in range(self.n_cls):
-                    cls_means[clnt,cls] = np.mean(clnt_y[clnt]==cls)
-            prior_real_diff = np.abs(cls_means-cls_priors)
-            print('--- Max deviation from prior: %.4f' %np.max(prior_real_diff))
-            print('--- Min deviation from prior: %.4f' %np.min(prior_real_diff))
-        
-            self.clnt_x = clnt_x; self.clnt_y = clnt_y
-
-        
-            print('Class frequencies:')
-            count = 0
-            for clnt in range(split_number):
-                print("Client %3d: " %clnt + 
-                    ', '.join(["%.3f" %np.mean(self.clnt_y[clnt]==cls) for cls in range(self.n_cls)]) + 
-                    ', Amount:%d' %self.clnt_y[clnt].shape[0])
-                count += self.clnt_y[clnt].shape[0]
-        
-        
-            print('Total Amount:%d' %count)
-            print('--------')
+                cls_means = np.zeros((split_number, self.n_cls))
+                for clnt in range(split_number):
+                    for cls in range(self.n_cls):
+                        cls_means[clnt,cls] = np.mean(clnt_y[clnt]==cls)
+                prior_real_diff = np.abs(cls_means-cls_priors)
+                print('--- Max deviation from prior: %.4f' %np.max(prior_real_diff))
+                print('--- Min deviation from prior: %.4f' %np.min(prior_real_diff))
             
-            self.data = list(clnt_x[split_id]); self.targets = clnt_y[split_id].T.tolist()[0]
+                self.clnt_x = clnt_x; self.clnt_y = clnt_y
+
+            
+                print('Class frequencies:')
+                count = 0
+                for clnt in range(split_number):
+                    print("Client %3d: " %clnt + 
+                        ', '.join(["%.3f" %np.mean(self.clnt_y[clnt]==cls) for cls in range(self.n_cls)]) + 
+                        ', Amount:%d' %self.clnt_y[clnt].shape[0])
+                    count += self.clnt_y[clnt].shape[0]
+            
+            
+                print('Total Amount:%d' %count)
+                print('--------')
+                
+                self.data = list(clnt_x[split_id]); self.targets = clnt_y[split_id].T.tolist()[0]
+                i=0
+                os.makedirs('%s/dat/diri%d_%d' %(self.root,self.rule_arg,self.split_number))
+                for clnt_xi, clnt_yi in zip(clnt_x, clnt_y):
+                    fp=open('%s/dat/diri%d_%d/%d' %(self.root,self.rule_arg,self.split_number,i), 'wb')
+                    pickle.dump((clnt_xi, clnt_yi), fp)
+                    fp.close()
+                    i+=1
 
         return self.data, self.targets
 
