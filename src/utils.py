@@ -94,9 +94,10 @@ def handle_args_f():
     parser.add_argument("--debug", help="enable log(debug)", action="store_true", default=False)
     parser.add_argument("--container","-c", help="container", action="store_true", default=False)
     parser.add_argument("--test", "-t", help="A number for test case", type=int, default=0)
+    parser.add_argument("--splitnum", "-s", help="A number for test case", type=int, default=0)
     #add for federated learning
     parser.add_argument("--gpu","-g", help="GPU num (-1 if use cpu)", type=int, default=0)
-    parser.add_argument("--iid","-i", help="non-iid data", action="store_false", default=True)     
+    parser.add_argument("--iid","-i", help="non-iid data", action="store_false", default=True)
     args = parser.parse_args()
 
     this_addr = (args.addr, args.port)
@@ -139,7 +140,7 @@ def handle_args_f():
     else:
         device = 'cuda:' + str(args.gpu)
     
-    return this_addr, help_addr, logger, args.container, device, args.test, args.iid
+    return this_addr, help_addr, logger, args.container, device, args.test, args.iid, args.splitnum
 
 def hash(addr, NUM_OF_BITS=6):
     """
