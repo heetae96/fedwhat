@@ -49,7 +49,7 @@ def handle_args():
         help_addr = None
     else:
         help_addr = (args.help_addr, args.help_port)
-        
+
     formatter = MultiLineFormatter(
     fmt='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%H:%M:%S',
@@ -65,12 +65,12 @@ def handle_args():
         else:
             log_handler.setLevel(logging.INFO)
         logger.addHandler(log_handler)
-        
+
         con_handler= logging.StreamHandler()
         con_handler.setFormatter(formatter)
         con_handler.setLevel(logging.CRITICAL)
         logger.addHandler(con_handler)
-        
+
         logger.setLevel(logging.DEBUG)
     else:
         logger = logging.getLogger()
@@ -78,9 +78,9 @@ def handle_args():
         log_handler= logging.StreamHandler()
         log_handler.setFormatter(formatter)
         logger.addHandler(log_handler)
-    
-    
-    
+
+
+
     return this_addr, help_addr, logger, args.container
 
 def handle_args_f():
@@ -94,6 +94,7 @@ def handle_args_f():
     parser.add_argument("--debug", help="enable log(debug)", action="store_true", default=False)
     parser.add_argument("--container","-c", help="container", action="store_true", default=False)
     parser.add_argument("--test", "-t", help="A number for test case", type=int, default=0)
+    parser.add_argument("--splitnum", "-s", help="A number for test case", type=int, default=0)
     #add for federated learning
     parser.add_argument("--gpu","-g", help="GPU num (-1 if use cpu)", type=int, default=0)
     parser.add_argument("--iid","-i", help="non-iid data", action="store_false", default=True)     
@@ -104,7 +105,7 @@ def handle_args_f():
         help_addr = None
     else:
         help_addr = (args.help_addr, args.help_port)
-        
+
     formatter = MultiLineFormatter(
     fmt='%(asctime)s %(levelname)-8s %(message)s',
     datefmt='%H:%M:%S',
@@ -119,12 +120,12 @@ def handle_args_f():
         else:
             log_handler.setLevel(logging.INFO)
         logger.addHandler(log_handler)
-        
+
         con_handler= logging.StreamHandler()
         con_handler.setFormatter(formatter)
         con_handler.setLevel(logging.CRITICAL)
         logger.addHandler(con_handler)
-        
+
         logger.setLevel(logging.DEBUG)
     else:
         logger = logging.getLogger()
@@ -132,14 +133,14 @@ def handle_args_f():
         log_handler= logging.StreamHandler()
         log_handler.setFormatter(formatter)
         logger.addHandler(log_handler)
-    
+
     #add for federated learning
     if args.gpu == -1:
         device = 'cpu'
     else:
         device = 'cuda:' + str(args.gpu)
-    
-    return this_addr, help_addr, logger, args.container, device, args.test, args.iid
+
+    return this_addr, help_addr, logger, args.container, device, args.test, args.iid, args.splitnum
 
 def hash(addr, NUM_OF_BITS=6):
     """
@@ -156,39 +157,6 @@ def get_global_ip():
 
 def get_self_ip():
     return socket.gethostbyname(socket.gethostname())
-
-def format_time(seconds):
-    days = int(seconds / 3600/24)
-    seconds = seconds - days*3600*24
-    hours = int(seconds / 3600)
-    seconds = seconds - hours*3600
-    minutes = int(seconds / 60)
-    seconds = seconds - minutes*60
-    secondsf = int(seconds)
-    seconds = seconds - secondsf
-    millis = int(seconds*1000)
-
-    f = ''
-    i = 1
-    if days > 0:
-        f += str(days) + 'D'
-        i += 1
-    if hours > 0 and i <= 2:
-        f += str(hours) + 'h'
-        i += 1
-    if minutes > 0 and i <= 2:
-        f += str(minutes) + 'm'
-        i += 1
-    if secondsf > 0 and i <= 2:
-        f += str(secondsf) + 's'
-        i += 1
-    if millis > 0 and i <= 2:
-        f += str(millis) + 'ms'
-        i += 1
-    if f == '':
-        f = '0ms'
-    return f
-
 
 if __name__ == '__main__':
     print('g:', get_global_ip())
