@@ -53,6 +53,7 @@ class custom_dataset(VisionDataset):
         self.unbalanced_sgm = unbalanced_sgm
         self.rule_arg = rule_arg
         self.data, self.targets = self.get_data()
+        print('Split num : [%d / %d]' %(split_id, split_number))
 
     def __getitem__(self, index):
         
