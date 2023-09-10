@@ -50,14 +50,14 @@ class learning:
             root='./data', train=True, download=True, transform=transform_train, 
             split_number=self.dataconfig[0], split_id=self.dataconfig[1], iid=self.iid, dataset_name="cifar10" )
         self.trainloader = torch.utils.data.DataLoader(
-            trainset, batch_size=128, shuffle=True, num_workers=2)
+            trainset, batch_size=64, shuffle=True, num_workers=2)
 
         # testset = torchvision.datasets.EMNIST(
         #     root='./data', split='balanced', train=False, download=False, transform=transform_test)
         testset = torchvision.datasets.CIFAR10(
             root='./data', train=False, download=False, transform=transform_test)
         self.testloader = data.DataLoader(
-            testset, batch_size=100, shuffle=False, num_workers=2)
+            testset, batch_size=80, shuffle=False, num_workers=2)
 
         #self.classes = ('plane', 'car', 'bird', 'cat', 'deer',
         #        'dog', 'frog', 'horse', 'ship', 'truck')
@@ -74,7 +74,7 @@ class learning:
         #self.optimizer = optim.Adam(self.net.parameters())
         #self.optimizer = optim.SGD(self.net.parameters())
         self.optimizer = optim.SGD(self.net.parameters(),lr=0.01,momentum=0.9, weight_decay=5e-4)
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=400)
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(self.optimizer, T_max=500)
         self.fedopt = FedAvg_modif()
         
     # Training
