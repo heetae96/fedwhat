@@ -202,13 +202,13 @@ class P2PNode:
         read data from other nodes
         """
         #message = "---- wait for recv[any other] from {}".format(conn.getpeername()) 
-        try:
-            data = conn.recv(1024)
-            data = pickle.loads(data)
-            threading.Thread(target=self._handle, args=((data,conn)), daemon=True).start()
-            sel.unregister(conn)
-        except Exception as e:
-            self.logger.critical("ERROR in read handler")
+        #try:
+        data = conn.recv(1024)
+        data = pickle.loads(data)
+        threading.Thread(target=self._handle, args=((data,conn)), daemon=True).start()
+        sel.unregister(conn)
+        # except Exception as e:
+        #     self.logger.critical("ERROR in read handler")
 
     ################## core method thread called by init ##################
 
