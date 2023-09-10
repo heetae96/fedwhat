@@ -29,8 +29,8 @@ class P2PNode:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind(addr)
-        self.socket.setblocking(False)
-        self.socket.listen(5)
+        #self.socket.setblocking(False)
+        self.socket.listen()
         self.id = self.__hash(self.addr)
         #self.id = int(((1<<16)/5)*int(data_no))         
 
